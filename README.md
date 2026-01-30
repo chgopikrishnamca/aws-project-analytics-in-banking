@@ -1,8 +1,6 @@
 
 # Banking Analytics: AWS Capstone Project
 
-WIP.
-
 This project involves in building a Banking Analytics Lakehouse that processes daily transaction files and stores them in Amazon S3 Tables—a purpose-built storage tier for Apache Iceberg that provides high-performance transactional consistency. 
 
 ### Project Goal
@@ -11,33 +9,32 @@ To build a scalable, automated, analytics-ready data pipeline using AWS services
 
 ### Technology Stack
 
-1. Amazon S3 - Data lakes (raw, staging, optimized zones)
-2. AWS Glue Studio Note books - To write pyspark scripts
-3. AWS Glue Crawler - Schema inference & Data Catalog population
-4. AWS Glue Catalog - Populate catalog information
-5. AWS Lambda - Trigger ETL jobs
-6. Amazon Athena - Serverless querying
-7. Amazon Event Bridge - To Schedule Glue ETL jobs
-8. Amazon SNS - To setup email notifications
+1. Amazon S3 - Data lakes, Iceberg Table data
+2. AWS Glue Script - To write pyspark scripts
+3. Iceberg - To have optmized/enrichied data in iceberg tables.
+4. Amazon Athena - To query enriched data
+5. Amazon SNS - To setup email notifications
 
 Languages & Tools : Python, PySpark, SQL
 
 ### Dataset Details
 
-Raw CSV files and their fields:
+Usually we can collect datasets from any source like kaggle. Here we have generated datasets for practice purpose using a python script located in "/Python Snippets/generaye_datasets.py". This script generates files as below.
 
 1. customers.csv: customer_id, name, email, country
 2. accounts.csv: account_id, customer_id, account_type (Savings/Current), balance.
 3. transactions.csv:  txn_id, account_id, amount, txn_type (Credit/Debit), timestamp. 
 
+Put these files in to s3://banking-app-landing-area/raw.
+
 #### Data Lake Structure - S3 Folder Structure
-1. Raw Data (Landing Area) : s3://banking-app-landing-area/
+1. Raw Data (Landing Area) : s3://banking-app-landing-area/raw/
 
-    s3://banking-app-landing-area/customers/
+    s3://banking-app-landing-area/raw/customers/
 
-    s3://banking-app-landing-area/accounts/
+    s3://banking-app-landing-area/raw/accounts/
 
-    s3://banking-app-landing-area/transactions/
+    s3://banking-app-landing-area/raw/transactions/
 
 2. Optimized Data (Gold Layer) : s3://banking-app-processed-data/
 
@@ -45,7 +42,7 @@ Raw CSV files and their fields:
 #### Step 1 : Create S3 buckets.
 
 - Raw Data: s3://banking-app-landing-area/
-- Processed Data: s3://banking-app-processed-data/
+- Enriched Iceberg Warehouse Data: s3://bank-app-lakehouse-iceberg/
 
 #### Step 2 : Upload Raw CSV Files into respective folders. 
 
@@ -53,69 +50,40 @@ Raw CSV files and their fields:
 - s3://banking-app-landing-area/accounts/
 - s3://banking-app-landing-area/transactions/
 
-Once files are uploaded, please add "_DONE.txt" file to to "s3://ecom-app-landing-area/"  trigger ETL1 job.
+Schedule the job to run on specific time using Amazon scheduler or run on demand daily basis. 
 
 #### Step3: Create IAM Roles 
 
-1. Role: AWSGlueETLRole-BankApp 
+1. Role: AWSGlueServiceRole-BankAppAnalytics
 
-- S3 read/write for landing + staging + optimized 
-- CloudWatch Logs 
+- S3 read/write permissions
+- CloudWatch Logs permissions
 
-2. Role: LambdaExecutionRole-BankApp 
+#### Step 4 : Create Glue jobs for Data Cleaning & Transformations
 
-- S3 Read 
-- Glue:StartJobRun 
-- CloudWatch Logs 
+1. ETL Job: ETLBankAppAnalytics : AWS Glue Job that involves in transforming and writing enriched data to iceberf g tables.
 
-#### Step 4: Create Glue Crawlers
 
-1. crawl-raw-data-job : crawls raw data from s3://ecom-app-landing-area
-2. crawl-processed-data-job : crawls staging data from s3://ecom-app-processed-data/staging/
+#### Step 5 : Create Automation Triggers (optional, we are running this on demand on daily basis)
 
-#### Step 5 : Create Glue jobs for Data Cleaning & Transformations
-
-1. ETL Job: ETL Job - Transform Raw Data : Involves in data cleaning.
-
-✔ Schema Enforcement
-
-- Casting datatypes
-- Converting string→date, bigint→int, double, etc.
-
-✔ Data Cleaning
-
-- Handling nulls
-- Imputing missing values (like default country = "India")
-- Removing duplicates
-- Trimming text fields
-
-✔ Output
-
-Cleaned Parquet files → Stored in staging area bucket.
-
-#### Step 6 : Create Automation Triggers 
-
-- lambda-etl1-trigger-job : Triggers ETL job1
-- lambda-etl2-trigger-job-daily : Triggers ETL2 job
-- Amazon Event Bridge Scheduler : Invokes lambda function "lambda-etl2-trigger-job-daily"
+1. create a lambda function that triggers AWS Glue ETL job.
+2. Use Amazon Event Bridge Scheduler torun Lamda Function on daily basis.
 
 #### Step 5 : Query Athena Tables
 
-Crawlers scan the optimized S3 folders and generate analytics-ready tables:
+Glue job writes the enriched data to Iceberf tables, which can be queried through athena.
 
 
 #### Athena Analytics Queries
-
-
+Please look into the PPT file for queries
 
 ### Key Insights Derived
-
-
-
-
-### Challenges & Solutions
-
-
+Customer Behaviour
+Bank Performance
+Bank Audit Purposes
+Fraud Detection
 
 ### Future Enhancements
-
+1. ETL job Can be automated using a lambda function.
+2. Data Sets can be more realistic by taking from kaggle or any other site.
+3. Can implement Event based processing as well, based on the requirement.
